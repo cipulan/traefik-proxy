@@ -10,18 +10,16 @@ services:
       - "--log.filePath=/logs/traefik.log"
       - "--accesslog=true"
       - "--api.dashboard=true"
+      - "--api.insecure=true" # Enable insecure api for local use
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
-        # - "--entryPoints.web.forwardedHeaders.insecure"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.websecure.address=:443"
-        # - "--entryPoints.websecure.forwardedHeaders.insecure"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=saiful@pingsut.com"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-      - "--serverstransport.insecureskipverify=true"
+      - "--serverstransport.insecureskipverify=true" # This option should be carefully used, remove if not needed
     ports:
       - "80:80"
       - "443:443"
@@ -32,18 +30,20 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "1k"
-        max-file: "3"
+        max-size: "10m" # Increase log size, easier to debug
+        max-file: "5"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.semut.pingsut.com`)"
+      # Traefik Dashboard Router
+      - "traefik.http.routers.traefik.rule=Host(`${TRAEFIK_DOMAIN}`)"
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.service=api@internal"
       - "traefik.http.routers.traefik.tls.certresolver=myresolver"
       - "traefik.http.routers.traefik.middlewares=traefik-auth,traefik-compress"
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=ipul:$$apr1$$jAzACfCs$$myU9dZT3.Y1JG4J17jHHd/"
+        # Traefik Dashboard Middleware
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_USERNAME}:${TRAEFIK_PASSWORD}"
       - "traefik.http.middlewares.traefik-compress.compress=true"
 
 networks:
   proxy:
-    external: {}
+    external: true
